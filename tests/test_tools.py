@@ -651,3 +651,54 @@ def test_a_folder_named_like_a_corrupt_copy_does_not_hide_secrets() -> None:
     assert FileAccess.is_sensitive("folder.corrupt.1/secrets.yaml")
     assert FileAccess.is_sensitive("sub/secrets.yaml.corrupt.2026")
     assert not FileAccess.is_sensitive("folder.corrupt.1/notes.yaml")
+
+
+async def test_a_new_automation_is_saved_under_the_id_the_approval_showed(
+    hass: HomeAssistant, config_dir: Path
+) -> None:
+    import asyncio
+
+    assert await async_setup_component(hass, "automation", {"automation": []})
+    ctx = _ctx(hass)
+    save = _tool("save_config_item")
+    args = save.check_args(
+        {
+            "kind": "automation",
+            "config": {
+                "alias": "Spots off",
+                "triggers": [{"trigger": "state", "entity_id": "light.a", "to": "on"}],
+                "actions": [{"action": "light.turn_off", "target": {"entity_id": "light.a"}}],
+            },
+        }
+    )
+    preview = await save.preview(ctx, args)
+    await asyncio.sleep(0.01)  # the id used to be the clock at each step
+    out = await save.run(ctx, args)
+    assert preview.summary == f"Create automation {out.data['id']}"
+
+
+def test_all_devices_reads_both_registry_shapes() -> None:
+    from types import SimpleNamespace
+
+    from custom_components.llm_agent.tools.util import all_devices
+
+    a, b = SimpleNamespace(id="a"), SimpleNamespace(id="b")
+    assert all_devices(SimpleNamespace(devices={"a": a, "b": b})) == [a, b]  # before 2026.10
+    assert all_devices(SimpleNamespace(devices=[a, b])) == [a, b]  # a collection of entries
+    assert all_devices(SimpleNamespace(devices={})) == []
+
+
+async def test_device_lookups_raise_no_deprecation_warning(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    from homeassistant.helpers import device_registry as dr
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    entry = MockConfigEntry(domain="test")
+    entry.add_to_hass(hass)
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id, identifiers={("test", "x")}, name="Box"
+    )
+    out = await _tool("list_devices").run(_ctx(hass), {})
+    assert "Box" in str(out.data)
+    assert "device_registry.devices" not in caplog.text

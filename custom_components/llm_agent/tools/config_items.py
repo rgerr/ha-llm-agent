@@ -322,6 +322,10 @@ class SaveItem(Tool):
         ):
             config = {"alias": config["name"], **{k: v for k, v in config.items() if k != "name"}}
             args = {**args, "config": config}
+        if args.get("kind") in KINDS and not KINDS[args["kind"]][1] and not args.get("id"):
+            # A new automation or scene gets its id here, once: the approval then shows
+            # the id that is saved (the preview and the save used to make one each).
+            args = {**args, "id": str(int(time.time() * 1000))}
         return args
 
     def classify(self, ctx: ToolContext, args: dict[str, Any]) -> Risk:
