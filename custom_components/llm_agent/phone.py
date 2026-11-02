@@ -3,7 +3,7 @@
 The household picks one notify action (notify.mobile_app_<phone>). An approval goes to
 that phone when nobody has the chat open, when it has waited a minute in the panel, when
 an automation's request needs it, or when a household member's chat needs an admin. The
-notification has Approve and Deny buttons. Each one carries a random token that only that
+notification has Approve and Deny buttons, in Home Assistant's language. Each one carries a random token that only that
 notification knows, and a press only counts when it comes from an admin's phone.
 """
 
@@ -25,6 +25,36 @@ EVENT = "mobile_app_notification_action"
 APPROVE = "LLM_AGENT_APPROVE_"
 DENY = "LLM_AGENT_DENY_"
 MAX_TEXT = 900
+
+# What the phone shows, in Home Assistant's language (English when it has none here).
+TEXTS: dict[str, dict[str, str]] = {
+    "en": {
+        "title": "Approve this action?",
+        "approve": "Approve",
+        "deny": "Deny",
+        "asks": "{who} asks: {what}",
+        "automation": "An automation",
+        "asks_via": "{who} asks through an automation: {what}",
+        "someone": "Someone",
+        "too_long": "This is too long to show in full here, so it can only be denied.",
+    },
+    "nl": {
+        "title": "Deze actie goedkeuren?",
+        "approve": "Goedkeuren",
+        "deny": "Weigeren",
+        "asks": "{who} vraagt: {what}",
+        "automation": "Een automatisering",
+        "asks_via": "{who} vraagt via een automatisering: {what}",
+        "someone": "Iemand",
+        "too_long": "Dit is te lang om hier helemaal te tonen, dus je kunt het alleen weigeren.",
+    },
+}
+
+
+def phone_text(hass: HomeAssistant, key: str, **values: str) -> str:
+    """One of TEXTS in Home Assistant's language ("nl-BE" uses "nl")."""
+    lang = str(getattr(hass.config, "language", "") or "en").split("-")[0].lower()
+    return TEXTS.get(lang, TEXTS["en"])[key].format(**values)
 
 
 def phone_service(options: dict[str, Any]) -> str | None:
@@ -72,9 +102,11 @@ class PhoneApprovals:
         if not can_approve:
             self._deny_only.add(token)
         message = text if len(text) <= MAX_TEXT else text[: MAX_TEXT - 1] + "…"
-        actions = [{"action": DENY + token, "title": "Deny"}]
+        actions = [{"action": DENY + token, "title": phone_text(self.hass, "deny")}]
         if can_approve:
-            actions.insert(0, {"action": APPROVE + token, "title": "Approve"})
+            actions.insert(
+                0, {"action": APPROVE + token, "title": phone_text(self.hass, "approve")}
+            )
         try:
             await self.hass.services.async_call(
                 "notify",

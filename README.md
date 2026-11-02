@@ -117,6 +117,26 @@ to approve anything, so any action that would need approval is refused and the A
 what it would have done. Everyday actions follow your approval mode as usual. These chats
 show up in the panel too, marked with a robot icon.
 
+**When a reply is ready:** every finished turn, from the panel or from `llm_agent.ask`,
+fires an `llm_agent_reply` event with `conversation_id`, `title`, `reply` (the first 500
+characters), `user_id`, `watched` (someone has the chat open), `stopped` and `failed`. A
+household member's chat leaves out `title` and `reply`. A link to `/llm-agent?chat=<id>`
+opens that chat, so a notification can take you straight to it:
+
+```yaml
+- trigger: event
+  event_type: llm_agent_reply
+  event_data:
+    watched: false
+  actions:
+    - action: notify.mobile_app_phone
+      data:
+        title: "{{ trigger.event.data.title }}"
+        message: "{{ trigger.event.data.reply }}"
+        data:
+          url: "/llm-agent?chat={{ trigger.event.data.conversation_id }}"
+```
+
 **Scheduled prompts:** put the action in an automation with a time trigger ("every
 Sunday at 6 pm, list unavailable devices and low batteries"). You can also ask the AI in
 the panel to set one up; it writes the automation and you approve it.

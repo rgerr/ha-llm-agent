@@ -8,6 +8,8 @@ DOMAIN = "llm_agent"
 NAME = "LLM Agent"
 
 PANEL_URL = "llm-agent"
+# fired on the bus when a turn ends (see ChatRun._fire_reply)
+EVENT_REPLY = "llm_agent_reply"
 PANEL_ELEMENT = "llm-agent-panel"
 STATIC_URL = "/llm_agent_static"
 

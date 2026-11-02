@@ -152,3 +152,16 @@ async def test_runs_from_automations_are_named_and_marked_in_the_chat_list(
     assert listed[plain["conversation_id"]]["title"] == "check batteries again"
     with pytest.raises(Exception, match="length"):
         await _ask(hass, provider, prompt="x", title="t" * 121)
+
+
+async def test_an_ask_reply_is_not_counted_as_watched(hass: HomeAssistant) -> None:
+    from custom_components.llm_agent.const import EVENT_REPLY
+
+    await _setup(hass)
+    events = []
+    hass.bus.async_listen(EVENT_REPLY, events.append)
+    await _ask(hass, ScriptedProvider([reply_text("All shut.")]), prompt="windows?")
+    await hass.async_block_till_done()
+    assert events[0].data["unattended"] is True
+    assert events[0].data["watched"] is False
+    assert events[0].data["reply"] == "All shut."

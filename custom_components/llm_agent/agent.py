@@ -54,6 +54,7 @@ from .const import (
     CONF_UNDO_KEEP,
     CONF_UNDO_MB,
     DEFAULT_ALWAYS_ASK,
+    EVENT_REPLY,
     MAX_TOOL_RESULT_CHARS,
     MODE_ASK_RISKY,
     MODE_AUTOPILOT,
@@ -61,7 +62,7 @@ from .const import (
     MODE_REVIEWER,
     setting,
 )
-from .phone import MAX_TEXT as PHONE_MAX_TEXT, PhoneApprovals, phone_service
+from .phone import MAX_TEXT as PHONE_MAX_TEXT, PhoneApprovals, phone_service, phone_text
 from .providers import ProviderConfig, ProviderError, make_provider
 from .providers.base import Done, TextDelta, ToolCall, Usage, scrub
 from .providers.models import (
@@ -309,10 +310,14 @@ class ChatRun:
         self.conv = conv
         self.user_id = user_id
         self.listeners: set[Emit] = set()
+        # listeners of the integration itself (llm_agent.ask): they don't count as
+        # someone watching the chat
+        self.own_listeners: set[Emit] = set()
         self.pending: dict[str, asyncio.Future[tuple[bool, str]]] = {}
         # approval events still waiting for an answer, replayed to late listeners
         self.open_approvals: dict[str, dict[str, Any]] = {}
         self.text_so_far = ""
+        self.failed = False  # an error ended the turn
         self.task: asyncio.Task[None] | None = None
         self.long_price: tuple[int, Price] | None = None
 
@@ -321,6 +326,8 @@ class ChatRun:
             self.text_so_far += event["text"]
         elif event["type"] == "approval":
             self.open_approvals[event["call_id"]] = event
+        elif event["type"] == "error":
+            self.failed = True
         for listener in list(self.listeners):
             listener(event)
 
@@ -558,6 +565,34 @@ class ChatRun:
             _drop_images(conv["messages"])
             agent.store.save(conv)
             self.emit({"type": "done", "usage": conv["usage"]})
+            self._fire_reply(user)
+
+    def _fire_reply(self, user: dict[str, Any]) -> None:
+        """Tell Home Assistant the turn ended, so an automation can say the reply is
+        ready (a phone notification that opens the chat, say). A household member's
+        chat is theirs: the event names it but carries none of its text."""
+        data: dict[str, Any] = {
+            "conversation_id": self.conv["id"],
+            "user_id": self.user_id,
+            "unattended": self.unattended,
+            # someone has this chat open in the panel right now
+            "watched": bool(self.listeners - self.own_listeners),
+            "stopped": self.conv.get("stopped"),
+            "failed": self.failed,
+        }
+        if not self.member:
+            # this turn's text only: what the model wrote after the user's message
+            messages = self.conv["messages"]
+            start = next((i for i, m in enumerate(messages) if m is user), len(messages))
+            texts = [
+                str(m.get("content") or "").strip()
+                for m in messages[start + 1 :]
+                if m["role"] == "assistant"
+            ]
+            reply = next((t for t in reversed(texts) if t), "")
+            data["title"] = self.conv["title"]
+            data["reply"] = reply if len(reply) <= 500 else reply[:499] + "…"
+        self.hass.bus.async_fire(EVENT_REPLY, data)
 
     def _keep_partial(self, text_parts: list[str], model: str) -> None:
         """Save the text the person already saw, so a reload or Continue keeps it. Tool
@@ -948,11 +983,14 @@ class ChatRun:
         fut = self.pending.get(call.id)
         if fut is None or fut.done():
             return
-        if self.unattended:
-            who = "An automation"
+        user = await self.hass.auth.async_get_user(self.user_id) if self.user_id else None
+        # A person's request, also when it reached the agent through a script or
+        # automation they ran (llm_agent.ask carries their user).
+        asks = "asks_via" if self.unattended and user and user.name else "asks"
+        if user and user.name:
+            who = user.name
         else:
-            user = await self.hass.auth.async_get_user(self.user_id) if self.user_id else None
-            who = user.name if user and user.name else "Someone"
+            who = phone_text(self.hass, "automation" if self.unattended else "someone")
         # Approving on the phone means seeing the whole action there, so nothing in it
         # may be cut short: whatever doesn't fit can only be denied on the phone.
         what = f"{call.name} {summarize_args(call.args, 10_000)}"
@@ -961,12 +999,14 @@ class ChatRun:
             # its title...) is shown too
             rest = {k: v for k, v in call.args.items() if not (preview.diff and k in DIFF_ARGS)}
             what = preview.summary + (f"\n{summarize_args(rest, 10_000)}" if rest else "")
-        text = f"{who} asks: {what}" + (f" ({risk.reason})" if risk.reason else "")
+        text = phone_text(self.hass, asks, who=who, what=what) + (
+            f" ({risk.reason})" if risk.reason else ""
+        )
         if preview and preview.diff:
             text += "\n\n" + preview.diff
         can_approve = len(text) <= PHONE_MAX_TEXT
         if not can_approve:
-            note = "\n\nThis is too long to show in full here, so it can only be denied."
+            note = "\n\n" + phone_text(self.hass, "too_long")
             text = text[: PHONE_MAX_TEXT - len(note) - 1] + "…" + note
 
         def on_phone(ok: bool) -> bool:
@@ -976,7 +1016,7 @@ class ChatRun:
             return self.answer(call.id, ok, "" if ok else "denied on the phone")
 
         token = await self.agent.phone.send(
-            self.agent.options, "Approve this action?", text, on_phone, can_approve
+            self.agent.options, phone_text(self.hass, "title"), text, on_phone, can_approve
         )
         if token is not None:
             if self.pending.get(call.id) is fut and not fut.done():

@@ -4872,8 +4872,11 @@ var Mi = o`
 	cost: 0
 }, $ = class extends k {
 	constructor(...e) {
-		super(...e), this.narrow = !1, this.convs = [], this.query = "", this.previews = /* @__PURE__ */ new Set(), this.hits = null, this.convId = null, this.chatTitle = "New chat", this.items = [], this.usage = Pi, this.running = !1, this.announce = "", this.editing = !1, this.photos = [], this.photoGen = 0, this.providerId = "", this.model = "", this.fetched = {}, this.showList = !1, this.loadError = "", this.mentions = [], this.prefs = Bi(), this.showPrefs = !1, this.showNotes = !1, this.notesDraft = "", this.notesBase = "", this.notesStatus = "", this.mentionIndex = 0, this.mentionStart = -1, this.gen = 0, this.started = !1, this.stickToBottom = !0, this.onReady = () => {
+		super(...e), this.narrow = !1, this.convs = [], this.query = "", this.previews = /* @__PURE__ */ new Set(), this.hits = null, this.convId = null, this.chatTitle = "New chat", this.items = [], this.usage = Pi, this.running = !1, this.announce = "", this.editing = !1, this.photos = [], this.photoGen = 0, this.providerId = "", this.model = "", this.fetched = {}, this.showList = !1, this.loadError = "", this.mentions = [], this.prefs = Vi(), this.showPrefs = !1, this.showNotes = !1, this.notesDraft = "", this.notesBase = "", this.notesStatus = "", this.mentionIndex = 0, this.mentionStart = -1, this.gen = 0, this.started = !1, this.stickToBottom = !0, this.onReady = () => {
 			this.running && this.convId && this.open(this.convId).catch(() => void 0);
+		}, this.onLocation = () => {
+			let e = Li();
+			e && e !== this.convId && this.refreshList().then(() => this.convs.some((t) => t.id === e) ? this.open(e) : void 0).catch(() => void 0);
 		}, this.modelError = "", this.loadingModels = /* @__PURE__ */ new Set(), this.noteCardSince = /* @__PURE__ */ new Map();
 	}
 	static {
@@ -4890,7 +4893,7 @@ var Mi = o`
 		this.prefs = {
 			...this.prefs,
 			[e]: t
-		}, Vi(this.prefs), this.applyPrefs();
+		}, Hi(this.prefs), this.applyPrefs();
 	}
 	async setMyDefault(e = !1) {
 		let t = await this.ws.sendMessagePromise({
@@ -4933,10 +4936,10 @@ var Mi = o`
 		}
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), this.listening?.removeEventListener?.("ready", this.onReady), this.listening = void 0, this.detach(), this.started = !1;
+		super.disconnectedCallback(), window.removeEventListener("location-changed", this.onLocation), this.listening?.removeEventListener?.("ready", this.onReady), this.listening = void 0, this.detach(), this.started = !1;
 	}
 	async init() {
-		this.listening = this.ws, this.ws.addEventListener?.("ready", this.onReady), await ct(this.hass?.locale?.language) && this.requestUpdate();
+		this.listening = this.ws, this.ws.addEventListener?.("ready", this.onReady), window.addEventListener("location-changed", this.onLocation), await ct(this.hass?.locale?.language) && this.requestUpdate();
 		try {
 			this.info = await this.ws.sendMessagePromise({ type: "llm_agent/info" }), this.loadError = "";
 		} catch (e) {
@@ -4944,11 +4947,11 @@ var Mi = o`
 			return;
 		}
 		this.applyPrefs(), this.providerId || this.startModel(), await this.refreshList();
-		let e = this.convId ?? Li();
+		let e = Li() ?? this.convId ?? Ri();
 		if (e && this.convs.some((t) => t.id === e)) try {
 			await this.open(e);
 		} catch {
-			Ri(null);
+			zi(null);
 		}
 	}
 	async refreshList() {
@@ -4971,7 +4974,7 @@ var Mi = o`
 		this.photos = [], this.photoGen++;
 	}
 	newChat() {
-		this.editing = !1, this.clearPhotos(), this.detach(), this.convId = null, Ri(null), this.chatTitle = "New chat", this.items = [], this.usage = Pi, this.running = !1, this.showList = !1, this.startModel(), this.input?.focus();
+		this.editing = !1, this.clearPhotos(), this.detach(), this.convId = null, zi(null), this.chatTitle = "New chat", this.items = [], this.usage = Pi, this.running = !1, this.showList = !1, this.startModel(), this.input?.focus();
 	}
 	async open(e, t = !1) {
 		let n = await this.detach();
@@ -4982,7 +4985,7 @@ var Mi = o`
 			conversation_id: e
 		});
 		if (n !== this.gen) return;
-		this.convId = r.id, Ri(r.id), this.chatTitle = r.title, this.usage = r.usage, this.providerId = r.provider_id, this.model = r.model, this.items = Yi(r.messages), r.stopped && r.stopped_text && this.items.push({
+		this.convId = r.id, zi(r.id), this.chatTitle = r.title, this.usage = r.usage, this.providerId = r.provider_id, this.model = r.model, this.items = Xi(r.messages), r.stopped && r.stopped_text && this.items.push({
 			kind: "notice",
 			text: r.stopped_text,
 			stop: r.stopped
@@ -5054,7 +5057,7 @@ var Mi = o`
 		let l = this.gen;
 		try {
 			let e = await this.ws.subscribeMessage((e) => {
-				l === this.gen && (e.type === "conversation" ? this.convId || (this.convId = e.conversation_id, this.chatTitle = e.title || o.slice(0, 60), Ri(this.convId)) : this.onEvent(e));
+				l === this.gen && (e.type === "conversation" ? this.convId || (this.convId = e.conversation_id, this.chatTitle = e.title || o.slice(0, 60), zi(this.convId)) : this.onEvent(e));
 			}, {
 				type: "llm_agent/chat",
 				text: o,
@@ -5074,7 +5077,7 @@ var Mi = o`
 			if (l !== this.gen) return;
 			this.running = !1, this.items = s.items, this.editing = s.editing, e === void 0 && this.input && (this.input.value = s.draft, this.photos = s.photos, this.autosize()), this.push({
 				kind: "notice",
-				text: ca(t),
+				text: la(t),
 				error: !0
 			});
 			return;
@@ -5209,7 +5212,7 @@ var Mi = o`
 		} catch (t) {
 			i && this.patchTool(e, i), this.push({
 				kind: "notice",
-				text: ca(t),
+				text: la(t),
 				error: !0
 			});
 		}
@@ -5228,7 +5231,7 @@ var Mi = o`
 		} catch (e) {
 			this.push({
 				kind: "notice",
-				text: ca(e),
+				text: la(e),
 				error: !0
 			});
 		}
@@ -5283,10 +5286,10 @@ var Mi = o`
 	async addPhotos(e) {
 		let t = this.photoGen;
 		for (let n of e) {
-			if (this.photos.length >= la) break;
+			if (this.photos.length >= ua) break;
 			try {
-				let e = await fa(n);
-				if (t !== this.photoGen || this.photos.length >= la) return;
+				let e = await pa(n);
+				if (t !== this.photoGen || this.photos.length >= ua) return;
 				this.photos = [...this.photos, e];
 			} catch {
 				this.push({
@@ -5327,7 +5330,7 @@ var Mi = o`
 		let e = this.input, t = this.hass;
 		if (!e || !t) return;
 		let n = e.value.slice(0, e.selectionStart ?? e.value.length), r = /(^|\s)@([^\s@]*)$/.exec(n);
-		r ? (this.mentionStart = n.length - r[2].length - 1, this.mentions = Gi(t, r[2]), this.mentionIndex = 0) : this.mentions = [];
+		r ? (this.mentionStart = n.length - r[2].length - 1, this.mentions = Ki(t, r[2]), this.mentionIndex = 0) : this.mentions = [];
 	}
 	pickMention(e) {
 		let t = this.input, n = t.selectionStart ?? t.value.length, r = t.value;
@@ -5376,7 +5379,7 @@ var Mi = o`
                 icon=${this.narrow ? "mdi:forum-outline" : "mdi:dock-left"}
               ></ha-icon>
             </button>
-            <div class="title">${ea(this.chatTitle)}</div>
+            <div class="title">${ta(this.chatTitle)}</div>
             ${this.items.length ? S`<button
                     class="icon"
                     title=${N("export_title")}
@@ -5436,8 +5439,8 @@ var Mi = o`
 		}, 300) : this.hits = null;
 	}
 	exportChat() {
-		let e = Ki(this.chatTitle, this.items), t = URL.createObjectURL(new Blob([e], { type: "text/markdown" })), n = document.createElement("a");
-		n.href = t, n.download = `${qi(this.chatTitle) || "chat"}.md`, n.click(), URL.revokeObjectURL(t);
+		let e = qi(this.chatTitle, this.items), t = URL.createObjectURL(new Blob([e], { type: "text/markdown" })), n = document.createElement("a");
+		n.href = t, n.download = `${Ji(this.chatTitle) || "chat"}.md`, n.click(), URL.revokeObjectURL(t);
 	}
 	renderList() {
 		let e = this.hits ?? this.convs;
@@ -5470,7 +5473,7 @@ var Mi = o`
       <div class="convs">
         ${this.hits && !this.hits.length ? S`<div class="nav-empty">${N("no_matches")}</div>` : C}
         ${!this.hits && !this.convs.length ? S`<div class="nav-empty">${N("no_chats")}</div>` : C}
-        ${ra(e, !!this.hits).map(([e, t]) => S`
+        ${ia(e, !!this.hits).map(([e, t]) => S`
             ${e ? S`<div class="group">${N(e)}</div>` : C}
             ${t.map((e) => S`<div
                   class="conv ${e.id === this.convId ? "active" : ""}"
@@ -5481,7 +5484,7 @@ var Mi = o`
                             class="auto"
                             icon="mdi:robot-outline"
                             title=${N("started_by_automation")}
-                          ></ha-icon>` : C}${ea(e.title)}${e.snippet && e.snippet !== e.title ? S`<small class="snippet">${e.snippet}</small>` : C}</span
+                          ></ha-icon>` : C}${ta(e.title)}${e.snippet && e.snippet !== e.title ? S`<small class="snippet">${e.snippet}</small>` : C}</span
                   >
                   <button
                     class="icon del"
@@ -5595,17 +5598,17 @@ var Mi = o`
     </div>`;
 	}
 	renderWelcome() {
-		let e = Wi(this.hass, this.member), t = this.hass?.user?.name?.split(" ")[0];
+		let e = Gi(this.hass, this.member), t = this.hass?.user?.name?.split(" ")[0];
 		return S`<div class="welcome">
       <div class="logo"><ha-icon icon="mdi:robot-happy-outline"></ha-icon></div>
       <h2>${t ? N("greeting_name", {
-			greeting: na(),
+			greeting: ra(),
 			name: t
-		}) : na()}</h2>
+		}) : ra()}</h2>
       ${this.member ? S`<p>${N("welcome_member")}</p>` : S`<p>${N("welcome_admin")}</p>
               <span class="mode-chip"
                 ><ha-icon icon="mdi:shield-check-outline"></ha-icon
-                >${sa(this.info?.approval_mode)}</span
+                >${ca(this.info?.approval_mode)}</span
               >`}
       <div class="tips">
         ${e.map((e) => S`<button
@@ -5659,7 +5662,7 @@ var Mi = o`
               </div>` : C;
 			case "notice": return S`<div class="notice ${e.error ? "error" : ""}">
           ${e.text}
-          ${t && !this.running && e.stop && Ji.has(e.stop) ? S`<button
+          ${t && !this.running && e.stop && Yi.has(e.stop) ? S`<button
                   class="small"
                   @click=${() => this.continueTurn(e.stop === "spend_cap")}
                 >
@@ -5691,8 +5694,8 @@ var Mi = o`
 	}
 	renderNoteSuggestion(e) {
 		let t = (e.approval?.diff ?? "").replace(/\n+$/, "").split("\n"), n = t.filter((e) => e.startsWith("+") && !e.startsWith("+++")).map((e) => e.slice(1)), r = t.filter((e) => e.startsWith("-") && !e.startsWith("---")).map((e) => e.slice(1)), i = this.noteCardSince.get(e.id);
-		i === void 0 && (i = Date.now(), this.noteCardSince.set(e.id, i), setTimeout(() => this.requestUpdate(), Ui + 50));
-		let a = Date.now() - i >= Ui;
+		i === void 0 && (i = Date.now(), this.noteCardSince.set(e.id, i), setTimeout(() => this.requestUpdate(), Wi + 50));
+		let a = Date.now() - i >= Wi;
 		return S`<div class="note-suggestion" role="group" aria-label=${N("suggested_note")}>
       <div class="note-head">
         <ha-icon icon="mdi:notebook-edit-outline"></ha-icon>
@@ -5754,14 +5757,14 @@ var Mi = o`
       <details ?open=${!!t || this.prefs.toolsOpen}>
         <summary>
           <span class="tool-icon"
-            ><ha-icon icon=${$i(e.name)}></ha-icon
+            ><ha-icon icon=${ea(e.name)}></ha-icon
           ></span>
-          <span class="tool-name">${ia(e.name)}</span>
+          <span class="tool-name">${aa(e.name)}</span>
           <span class="tool-summary"
-            >${t?.summary ?? e.summary ?? aa(e.args)}</span
+            >${t?.summary ?? e.summary ?? oa(e.args)}</span
           >
           ${e.undone ? S`<span class="tag">${N("undone")}</span>` : C}
-          ${Zi(e.review, e.reviewing)}
+          ${Qi(e.review, e.reviewing)}
           ${n}
           ${e.snapshotId && !e.undone && e.status === "ok" && !this.member ? S`<button
                   class="ghost small undo"
@@ -5778,10 +5781,10 @@ var Mi = o`
                 <ha-icon icon="mdi:shield-check-outline"></ha-icon>
                 <span
                   ><b>${e.review.model ? N("reviewer_model", { model: e.review.model }) : N("reviewer")}:</b>
-                  ${e.review.reason || N(Xi[e.review.decision])}</span
+                  ${e.review.reason || N(Zi[e.review.decision])}</span
                 >
               </div>` : C}
-        ${t?.diff ? S`<pre class="diff">${Qi(t.diff)}</pre>` : C}
+        ${t?.diff ? S`<pre class="diff">${$i(t.diff)}</pre>` : C}
         ${t && e.name === "save_dashboard" ? this.renderPreview(e) : C}
         ${this.renderArgs(e.args, !!t?.diff)}
         ${e.preview && !t ? S`<pre class="result">${e.preview}</pre>` : C}
@@ -5812,7 +5815,7 @@ var Mi = o`
     </div>`;
 	}
 	renderPhotos(e) {
-		return e.kind === "user" ? e.images?.length ? S`<div class="photos">${e.images.map((e) => S`<img src=${e.url} alt=${N("your_photo")} />`)}</div>` : e.photos ? S`<div class="photo-note"><ha-icon icon="mdi:image-outline"></ha-icon>${ta(e.photos)} ${N("not_kept")}</div>` : C : C;
+		return e.kind === "user" ? e.images?.length ? S`<div class="photos">${e.images.map((e) => S`<img src=${e.url} alt=${N("your_photo")} />`)}</div>` : e.photos ? S`<div class="photo-note"><ha-icon icon="mdi:image-outline"></ha-icon>${na(e.photos)} ${N("not_kept")}</div>` : C : C;
 	}
 	renderComposer() {
 		let e = this.provider, t = "models";
@@ -5859,7 +5862,7 @@ var Mi = o`
           <label
             class="attach icon"
             title=${N("add_photo_title")}
-            ?hidden=${this.photos.length >= la}
+            ?hidden=${this.photos.length >= ua}
           >
             <ha-icon icon="mdi:image-plus-outline"></ha-icon>
             <input
@@ -5934,14 +5937,14 @@ var Mi = o`
           title=${N("usage_title")}
         >
           ${N("usage_line", {
-			input: oa(this.usage.input + this.usage.cache_read + this.usage.cache_write),
-			output: oa(this.usage.output)
+			input: sa(this.usage.input + this.usage.cache_read + this.usage.cache_write),
+			output: sa(this.usage.output)
 		})}
-          ${this.usage.cache_read ? ` · ${N("usage_cached", { count: oa(this.usage.cache_read) })}` : C}
+          ${this.usage.cache_read ? ` · ${N("usage_cached", { count: sa(this.usage.cache_read) })}` : C}
           ·
           ${this.usage.cost == null ? N("cost_na") : `~$${this.usage.cost.toFixed(this.usage.cost < 1 ? 4 : 2)}`}
           ${this.usage.review ? ` · ${N("reviewer_usage", {
-			tokens: oa(this.usage.review.input + this.usage.review.output),
+			tokens: sa(this.usage.review.input + this.usage.review.output),
 			cost: this.usage.review.cost == null ? N("cost_na") : `~$${this.usage.review.cost.toFixed(4)}`
 		})}` : C}
         </span>
@@ -5952,18 +5955,25 @@ var Mi = o`
 Q([ze({ attribute: !1 })], $.prototype, "hass", void 0), Q([ze({ type: Boolean })], $.prototype, "narrow", void 0), Q([A()], $.prototype, "info", void 0), Q([A()], $.prototype, "convs", void 0), Q([A()], $.prototype, "query", void 0), Q([A()], $.prototype, "previews", void 0), Q([A()], $.prototype, "hits", void 0), Q([A()], $.prototype, "convId", void 0), Q([A()], $.prototype, "chatTitle", void 0), Q([A()], $.prototype, "items", void 0), Q([A()], $.prototype, "usage", void 0), Q([A()], $.prototype, "running", void 0), Q([A()], $.prototype, "announce", void 0), Q([A()], $.prototype, "editing", void 0), Q([A()], $.prototype, "photos", void 0), Q([A()], $.prototype, "providerId", void 0), Q([A()], $.prototype, "model", void 0), Q([A()], $.prototype, "fetched", void 0), Q([A()], $.prototype, "showList", void 0), Q([A()], $.prototype, "loadError", void 0), Q([A()], $.prototype, "mentions", void 0), Q([A()], $.prototype, "prefs", void 0), Q([A()], $.prototype, "showPrefs", void 0), Q([A()], $.prototype, "showNotes", void 0), Q([A()], $.prototype, "notesDraft", void 0), Q([A()], $.prototype, "notesStatus", void 0), Q([A()], $.prototype, "mentionIndex", void 0), Q([Ve(".composer textarea")], $.prototype, "input", void 0), Q([Ve(".messages")], $.prototype, "scroller", void 0);
 var Fi = "llm-agent-prefs", Ii = "llm-agent-last-chat";
 function Li() {
+	let e = new URLSearchParams(location.search), t = e.get("chat");
+	if (!t) return null;
+	e.delete("chat");
+	let n = e.toString();
+	return history.replaceState(history.state, "", location.pathname + (n ? `?${n}` : "") + location.hash), t;
+}
+function Ri() {
 	try {
 		return localStorage.getItem(Ii);
 	} catch {
 		return null;
 	}
 }
-function Ri(e) {
+function zi(e) {
 	try {
 		e ? localStorage.setItem(Ii, e) : localStorage.removeItem(Ii);
 	} catch {}
 }
-var zi = {
+var Bi = {
 	theme: "auto",
 	size: "normal",
 	compact: !1,
@@ -5972,24 +5982,24 @@ var zi = {
 	send: "enter",
 	listOpen: !0
 };
-function Bi() {
+function Vi() {
 	try {
 		let e = JSON.parse(localStorage.getItem(Fi) ?? "{}");
 		return {
-			...zi,
+			...Bi,
 			...typeof e == "object" && e ? e : {}
 		};
 	} catch {
-		return { ...zi };
+		return { ...Bi };
 	}
 }
-function Vi(e) {
+function Hi(e) {
 	try {
 		localStorage.setItem(Fi, JSON.stringify(e));
 	} catch {}
 }
-var Hi = 8, Ui = 1500;
-function Wi(e, t = !1) {
+var Ui = 8, Wi = 1500;
+function Gi(e, t = !1) {
 	let n = Object.values(e?.areas ?? {}).map((e) => String(e.name ?? "")).filter(Boolean).sort((e, t) => e.localeCompare(t))[0] ?? N("living_room"), r = Object.values(e?.states ?? {}).some((e) => e.attributes?.device_class === "energy");
 	return t ? [
 		{
@@ -6034,7 +6044,7 @@ function Wi(e, t = !1) {
 		}
 	];
 }
-function Gi(e, t) {
+function Ki(e, t) {
 	let n = t.toLowerCase(), r = [], i = (e, t) => {
 		let i = e.label.toLowerCase(), a = t.toLowerCase(), o;
 		if (!n) o = 3;
@@ -6064,12 +6074,12 @@ function Gi(e, t) {
 		insert: t.entity_id,
 		detail: t.entity_id
 	}, t.entity_id);
-	return r.sort((e, t) => e[0] - t[0] || e[1].label.localeCompare(t[1].label)), r.slice(0, Hi).map(([, e]) => e);
+	return r.sort((e, t) => e[0] - t[0] || e[1].label.localeCompare(t[1].label)), r.slice(0, Ui).map(([, e]) => e);
 }
-function Ki(e, t) {
-	let n = [`# ${ea(e)}`, ""];
+function qi(e, t) {
+	let n = [`# ${ta(e)}`, ""];
 	for (let e of t) if (e.kind === "user") {
-		let t = e.images?.length || e.photos || 0, r = t ? ` _(${ta(t)})_` : "";
+		let t = e.images?.length || e.photos || 0, r = t ? ` _(${na(t)})_` : "";
 		n.push(`**${N("you")}:** ${e.text}${r}`, "");
 	} else if (e.kind === "assistant" && e.text) n.push(e.text, "");
 	else if (e.kind === "notice") n.push(`> ${e.text}`, "");
@@ -6079,16 +6089,16 @@ function Ki(e, t) {
 	}
 	return n.join("\n");
 }
-function qi(e) {
+function Ji(e) {
 	return e.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50);
 }
-var Ji = /* @__PURE__ */ new Set([
+var Yi = /* @__PURE__ */ new Set([
 	"length",
 	"tool_limit",
 	"cancelled",
 	"spend_cap"
 ]);
-function Yi(e) {
+function Xi(e) {
 	let t = [], n = /* @__PURE__ */ new Map();
 	for (let r of e) if (r.role === "user") t.push({
 		kind: "user",
@@ -6121,33 +6131,33 @@ function Yi(e) {
 	}
 	return t;
 }
-var Xi = {
+var Zi = {
 	approve: "reviewer_approved",
 	deny: "reviewer_denied",
 	ask: "reviewer_unsure"
 };
-function Zi(e, t) {
+function Qi(e, t) {
 	return t && !e ? S`<span class="tag wait">${N("reviewing")}</span>` : e ? S`<span class="tag review ${e.decision}" title=${e.reason}
-    >${N(Xi[e.decision] ?? "reviewer")}</span
+    >${N(Zi[e.decision] ?? "reviewer")}</span
   >` : C;
 }
-function Qi(e) {
+function $i(e) {
 	return e.replace(/\n+$/, "").split("\n").map((e) => S`<span class=${e.startsWith("+") && !e.startsWith("+++") ? "add" : e.startsWith("-") && !e.startsWith("---") ? "del" : e.startsWith("@@") ? "hunk" : ""}>${e || " "}</span>`);
 }
-function $i(e) {
+function ea(e) {
 	return e === "shell" ? "mdi:console" : e === "call_service" ? "mdi:play-circle-outline" : e === "undo" ? "mdi:undo" : e === "system" ? "mdi:cog-outline" : e === "ha_websocket" ? "mdi:api" : e === "integrations" ? "mdi:puzzle-outline" : e === "read_reference" ? "mdi:book-open-variant" : e === "render_template" ? "mdi:code-braces" : e === "get_history" ? "mdi:chart-timeline-variant" : e === "web_fetch" ? "mdi:web" : e === "web_search" ? "mdi:magnify" : e === "camera_snapshot" ? "mdi:cctv" : e === "get_traces" ? "mdi:transit-connection-variant" : e === "get_logbook" ? "mdi:history" : e === "read_log" ? "mdi:text-box-search-outline" : e.includes("dashboard") ? "mdi:view-dashboard-outline" : e.includes("config_item") ? "mdi:robot-outline" : e.includes("file") ? "mdi:file-document-outline" : e.includes("area") || e.includes("device") || e.includes("registry") ? "mdi:devices" : e.includes("entit") || e.includes("service") ? "mdi:format-list-bulleted" : "mdi:wrench-outline";
 }
-function ea(e) {
+function ta(e) {
 	return e === "New chat" ? N("new_chat") : e;
 }
-function ta(e) {
+function na(e) {
 	return e === 1 ? N("one_photo") : N("n_photos", { count: e });
 }
-function na() {
+function ra() {
 	let e = (/* @__PURE__ */ new Date()).getHours();
 	return N(e < 5 ? "greeting_evening" : e < 12 ? "greeting_morning" : e < 18 ? "greeting_afternoon" : "greeting_evening");
 }
-function ra(e, t) {
+function ia(e, t) {
 	if (t) return [["", e]];
 	let n = /* @__PURE__ */ new Date();
 	n.setHours(0, 0, 0, 0);
@@ -6164,18 +6174,18 @@ function ra(e, t) {
 	}
 	return a;
 }
-function ia(e) {
+function aa(e) {
 	let t = `tool_${e}`;
 	return ot(t) ? N(t) : e.replace(/_/g, " ");
 }
-function aa(e) {
+function oa(e) {
 	let t = Object.entries(e).filter(([e]) => !e.startsWith("_")).map(([e, t]) => `${e}=${typeof t == "string" ? t : JSON.stringify(t)}`).join(" ");
 	return t.length > 120 ? `${t.slice(0, 117)}…` : t;
 }
-function oa(e) {
+function sa(e) {
 	return e >= 1e6 ? `${(e / 1e6).toFixed(1)}M` : e >= 1e3 ? `${(e / 1e3).toFixed(1)}k` : String(e);
 }
-function sa(e) {
+function ca(e) {
 	let t = {
 		ask_all: "mode_ask_all",
 		ask_risky: "mode_ask_risky",
@@ -6185,23 +6195,23 @@ function sa(e) {
 	}[e ?? ""];
 	return t ? N(t) : "";
 }
-function ca(e) {
+function la(e) {
 	return e.message ?? String(e);
 }
 customElements.get("llm-agent-panel") || customElements.define("llm-agent-panel", $);
-var la = 3, ua = 1568, da = 1e6;
-async function fa(e) {
+var ua = 3, da = 1568, fa = 1e6;
+async function pa(e) {
 	let t = await createImageBitmap(e);
 	try {
-		let e = Math.min(ua, Math.max(t.width, t.height));
+		let e = Math.min(da, Math.max(t.width, t.height));
 		for (;;) {
 			for (let n of [
 				.85,
 				.7,
 				.55
 			]) {
-				let r = pa(t, e, n), i = r.slice(r.indexOf(",") + 1);
-				if (i.length <= da) return {
+				let r = ma(t, e, n), i = r.slice(r.indexOf(",") + 1);
+				if (i.length <= fa) return {
 					media_type: "image/jpeg",
 					data: i,
 					url: r
@@ -6214,11 +6224,11 @@ async function fa(e) {
 		t.close();
 	}
 }
-function pa(e, t, n) {
+function ma(e, t, n) {
 	let r = Math.min(1, t / Math.max(e.width, e.height)), i = document.createElement("canvas");
 	i.width = Math.max(1, Math.round(e.width * r)), i.height = Math.max(1, Math.round(e.height * r));
 	let a = i.getContext("2d");
 	return a.fillStyle = "#fff", a.fillRect(0, 0, i.width, i.height), a.drawImage(e, 0, 0, i.width, i.height), i.toDataURL("image/jpeg", n);
 }
 //#endregion
-export { Gi as findMentions, Ki as toMarkdown, Wi as welcomeTips };
+export { Ki as findMentions, qi as toMarkdown, Gi as welcomeTips };

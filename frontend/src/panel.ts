@@ -185,8 +185,20 @@ class LlmAgentPanel extends LitElement {
     if (this.running && this.convId) void this.open(this.convId).catch(() => undefined);
   };
 
+  /** A link followed while the panel is already showing (Home Assistant navigates
+   * without loading the panel again). */
+  private readonly onLocation = (): void => {
+    const id = linkedConv();
+    if (id && id !== this.convId) {
+      void this.refreshList()
+        .then(() => (this.convs.some((c) => c.id === id) ? this.open(id) : undefined))
+        .catch(() => undefined);
+    }
+  };
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    window.removeEventListener("location-changed", this.onLocation);
     this.listening?.removeEventListener?.("ready", this.onReady);
     this.listening = undefined;
     void this.detach();
@@ -196,6 +208,7 @@ class LlmAgentPanel extends LitElement {
   private async init(): Promise<void> {
     this.listening = this.ws;
     this.ws.addEventListener?.("ready", this.onReady);
+    window.addEventListener("location-changed", this.onLocation);
     if (await loadLanguage(this.hass?.locale?.language))
       this.requestUpdate();
     try {
@@ -210,8 +223,9 @@ class LlmAgentPanel extends LitElement {
     this.applyPrefs();
     if (!this.providerId) this.startModel();
     await this.refreshList();
-    // Coming back to the panel reopens the chat that was open last time.
-    const last = this.convId ?? lastConv();
+    // A link can name a chat; otherwise coming back to the panel reopens the chat
+    // that was open last time.
+    const last = linkedConv() ?? this.convId ?? lastConv();
     if (last && this.convs.some((c) => c.id === last)) {
       try {
         await this.open(last);
@@ -1674,6 +1688,22 @@ class LlmAgentPanel extends LitElement {
 
 const PREFS_KEY = "llm-agent-prefs";
 const LAST_CONV_KEY = "llm-agent-last-chat";
+
+/** The chat a link names (/llm-agent?chat=<id>, as the "reply ready" notification
+ * sends), taken off the address so a reload doesn't keep reopening it. */
+function linkedConv(): string | null {
+  const params = new URLSearchParams(location.search);
+  const id = params.get("chat");
+  if (!id) return null;
+  params.delete("chat");
+  const rest = params.toString();
+  history.replaceState(
+    history.state,
+    "",
+    location.pathname + (rest ? `?${rest}` : "") + location.hash,
+  );
+  return id;
+}
 
 function lastConv(): string | null {
   try {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 from homeassistant.core import (
     HomeAssistant,
@@ -71,7 +72,13 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
         run = ChatRun(agent, conv, user_id, unattended=True)
         errors: list[str] = []
-        run.listeners.add(lambda e: errors.append(e["message"]) if e["type"] == "error" else None)
+
+        def collect(event: dict[str, Any]) -> None:
+            if event["type"] == "error":
+                errors.append(event["message"])
+
+        run.listeners.add(collect)
+        run.own_listeners.add(collect)
         start = len(conv["messages"])
         agent.runs[conv["id"]] = run
 
