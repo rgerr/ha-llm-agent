@@ -15,6 +15,7 @@ from homeassistant.helpers import (
 from homeassistant.helpers.service import async_get_all_descriptions
 from homeassistant.helpers.template import Template
 import homeassistant.util.dt as dt_util
+import probatio as vol
 
 from ..approval import Risk, classify_service, expand_members
 from . import Tool, ToolContext, ToolError, ToolOutput, list_arg, num_arg, obj, similar_entities
@@ -561,7 +562,9 @@ class CallService(Tool):
                 target=target,
                 return_response=want_response,
             )
-        except (HomeAssistantError, ValueError) as err:
+        except (HomeAssistantError, ValueError, vol.Invalid) as err:
+            # vol.Invalid: the call didn't match the action's schema (a missing target,
+            # a wrong field). The model can correct that; it isn't an error in the agent.
             raise ToolError(f"{domain}.{service} failed: {err}") from err
         result: dict[str, Any] = {"ok": True}
         if want_response:

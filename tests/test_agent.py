@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import patch
 
 from homeassistant.core import HomeAssistant, ServiceCall
+import pytest
 from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.llm_agent.agent import Agent, ChatRun
@@ -526,3 +527,28 @@ async def test_actions_that_only_answer_run_in_read_only_mode(hass: HomeAssistan
     assert not any(e["type"] == "approval" for e in events)
     tool = next(m for m in conv["messages"] if m["role"] == "tool")
     assert tool["is_error"] is False and "Bridge offline" in str(tool["content"])
+
+
+async def test_a_call_that_misses_the_actions_schema_comes_back_to_the_model(
+    hass: HomeAssistant,
+) -> None:
+    from homeassistant.core import SupportsResponse
+    import probatio as vol
+
+    from custom_components.llm_agent.tools import ToolError
+    from custom_components.llm_agent.tools.states import CallService
+
+    async def get_items(call: ServiceCall) -> dict[str, Any]:
+        return {}
+
+    hass.services.async_register(
+        "todo",
+        "get_items",
+        get_items,
+        schema=vol.Schema({vol.Required("entity_id"): str}),
+        supports_response=SupportsResponse.ONLY,
+    )
+    from .test_tools import _ctx
+
+    with pytest.raises(ToolError, match=r"todo\.get_items failed"):
+        await CallService().run(_ctx(hass), {"domain": "todo", "service": "get_items"})
