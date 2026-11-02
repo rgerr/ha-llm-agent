@@ -94,6 +94,14 @@ class FileAccess:
         raw = (raw or "").strip() or "."
         path = Path(raw)
         if not path.is_absolute():
+            # Models often write "config/packages/x.yaml" for /config/packages/x.yaml.
+            # Take it that way when only that reading exists (for a new file: its folder).
+            if len(path.parts) > 1 and path.parts[0] == self.root.name:
+                rest = Path(*path.parts[1:])
+                if not (self.root / path).parent.exists() and (
+                    (self.root / rest).exists() or (self.root / rest).parent.is_dir()
+                ):
+                    path = rest
             path = self.root / path
         path = path.resolve()
         try:

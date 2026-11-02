@@ -651,3 +651,33 @@ def test_a_folder_named_like_a_corrupt_copy_does_not_hide_secrets() -> None:
     assert FileAccess.is_sensitive("folder.corrupt.1/secrets.yaml")
     assert FileAccess.is_sensitive("sub/secrets.yaml.corrupt.2026")
     assert not FileAccess.is_sensitive("folder.corrupt.1/notes.yaml")
+
+
+async def test_a_path_that_repeats_the_config_folder_name_is_read(
+    hass: HomeAssistant, tmp_path: Path
+) -> None:
+    from custom_components.llm_agent.tools.files import FileAccess
+
+    root = tmp_path / "config"
+    (root / "packages").mkdir(parents=True)
+    (root / "packages" / "pool.yaml").write_text("# pool v2\n")
+    hass.config.config_dir = str(root)
+    read = _tool("read_file")
+    out = await read.run(_ctx(hass), {"path": "config/packages/pool.yaml"})
+    assert "pool v2" in str(out.data)
+    # a real folder called config inside the config folder still wins
+    (root / "config").mkdir()
+    (root / "config" / "packages").mkdir()
+    (root / "config" / "packages" / "pool.yaml").write_text("# inner\n")
+    out = await read.run(_ctx(hass), {"path": "config/packages/pool.yaml"})
+    assert "inner" in str(out.data)
+    # a new file goes where its folder is
+    (root / "config" / "packages" / "pool.yaml").unlink()
+    (root / "config" / "packages").rmdir()
+    (root / "config").rmdir()
+    access = FileAccess(_ctx(hass))
+    assert access.resolve("config/packages/new.yaml")[1] == "packages/new.yaml"
+    assert access.resolve("config/nowhere/new.yaml")[1] == "config/nowhere/new.yaml"
+    # and it never leads outside
+    with pytest.raises(ToolError):
+        await read.run(_ctx(hass), {"path": "config/../../etc/passwd"})
