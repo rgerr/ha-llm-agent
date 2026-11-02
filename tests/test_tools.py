@@ -651,3 +651,48 @@ def test_a_folder_named_like_a_corrupt_copy_does_not_hide_secrets() -> None:
     assert FileAccess.is_sensitive("folder.corrupt.1/secrets.yaml")
     assert FileAccess.is_sensitive("sub/secrets.yaml.corrupt.2026")
     assert not FileAccess.is_sensitive("folder.corrupt.1/notes.yaml")
+
+
+async def test_an_item_in_a_package_is_found_with_its_file(
+    hass: HomeAssistant, config_dir: Path
+) -> None:
+    (config_dir / "configuration.yaml").write_text(
+        "homeassistant:\n  packages: !include_dir_named packages\n"
+        "automation: !include automations.yaml\n"
+        "script split: !include_dir_merge_named scripts\n"
+    )
+    (config_dir / "automations.yaml").write_text("[]\n")
+    (config_dir / "secrets.yaml").write_text("token: hunter22\n")
+    (config_dir / "packages").mkdir()
+    (config_dir / "packages" / "netatmo.yaml").write_text(
+        "automation:\n  - id: reload\n    alias: Reload\n"
+        "    actions: [{action: notify.x, data: {message: !secret token}}]\n"
+    )
+    # An old copy outside what Home Assistant loads must not be the answer.
+    (config_dir / "package_backups").mkdir()
+    (config_dir / "package_backups" / "netatmo_v0.yaml").write_text(
+        "automation:\n  - id: reload\n    alias: Old\n"
+    )
+    (config_dir / "scripts").mkdir()
+    (config_dir / "scripts" / "misc.yaml").write_text("wake:\n  sequence: []\n")
+    ctx = _ctx(hass)
+    got = await _tool("get_config_item").run(ctx, {"kind": "automation", "id": "reload"})
+    assert got.data["file"] == "packages/netatmo.yaml"
+    assert got.data["config"]["alias"] == "Reload"
+    assert "hunter22" not in json.dumps(got.data, default=str)
+    assert got.data["config"]["actions"][0]["data"]["message"] == "!secret token"
+    got = await _tool("get_config_item").run(ctx, {"kind": "script", "id": "wake"})
+    assert got.data["file"] == "scripts/misc.yaml"
+    with pytest.raises(ToolError, match="not found"):
+        await _tool("get_config_item").run(ctx, {"kind": "automation", "id": "nope"})
+
+
+async def test_yaml_search_stays_in_the_config_directory(hass: HomeAssistant, config_dir: Path):
+    outside = config_dir.parent / "outside.yaml"
+    outside.write_text("- id: x\n  alias: Outside\n")
+    (config_dir / "configuration.yaml").write_text(
+        "automation: !include ../outside.yaml\nautomation b: !include secrets.yaml\n"
+    )
+    (config_dir / "secrets.yaml").write_text("- id: x\n  alias: Secret\n")
+    with pytest.raises(ToolError, match="not found"):
+        await _tool("get_config_item").run(_ctx(hass), {"kind": "automation", "id": "x"})

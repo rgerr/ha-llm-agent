@@ -23,6 +23,7 @@ from . import Preview, Tool, ToolContext, ToolError, ToolOutput, obj
 from .files import FileAccess
 from .states import expand_target
 from .util import FILE_LOCK, diff_text, load_inert, read_text, retag, text_hash, to_yaml, write_text
+from .yaml_sources import find_in_yaml
 
 KINDS = {
     # kind: (file, keyed_by_dict)
@@ -260,7 +261,8 @@ class GetItem(Tool):
     def __init__(self) -> None:
         super().__init__(
             "get_config_item",
-            "Get the full config of an automation, script or scene by id or entity_id.",
+            "Get the full config of an automation, script or scene by id or entity_id, "
+            "and for one defined in YAML (a package, an include) the file it is in.",
             obj(
                 {
                     "kind": {"type": "string", "enum": list(KINDS)},
@@ -274,9 +276,32 @@ class GetItem(Tool):
         kind = args["kind"]
         item_id = _resolve_id(ctx, kind, args["id"])
         item = _find(await _load(ctx, kind), kind, item_id)
-        if item is None:
-            raise ToolError(f"{kind} {item_id} not found in {KINDS[kind][0]}")
-        return ToolOutput({"id": item_id, "config": item})
+        if item is not None:
+            return ToolOutput({"id": item_id, "config": item})
+        # Not in the UI file: look where configuration.yaml sends Home Assistant
+        # (includes, packages). Read only: save_config_item writes the UI file.
+        files = FileAccess(ctx)
+        found = await ctx.hass.async_add_executor_job(
+            find_in_yaml,
+            files.root,
+            kind,
+            item_id,
+            files.is_sensitive if files.protect else (lambda rel: False),
+        )
+        if found is None:
+            raise ToolError(
+                f"{kind} {item_id} not found in {KINDS[kind][0]} or in the YAML "
+                "configuration.yaml includes"
+            )
+        return ToolOutput(
+            {
+                "id": item_id,
+                "file": found[0],
+                "config": found[1],
+                "note": f"Defined in YAML, not in {KINDS[kind][0]}: change it by editing "
+                f"{found[0]}, not with save_config_item.",
+            }
+        )
 
 
 def _infer_kind(args: dict[str, Any]) -> dict[str, Any]:
