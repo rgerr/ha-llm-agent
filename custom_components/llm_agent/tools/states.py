@@ -115,6 +115,8 @@ def compact_state(hass, state, attrs: bool = False) -> dict[str, Any]:
         "name": state.name,
         "state": state.state,
     }
+    if unit := state.attributes.get("unit_of_measurement"):
+        item["unit"] = unit
     if area := entity_area(hass, state.entity_id):
         item["area"] = area
     if attrs:
@@ -127,8 +129,11 @@ class SearchEntities(Tool):
     def __init__(self) -> None:
         super().__init__(
             "search_entities",
-            "Find entities by text, domain and/or area. Returns entity_id, name, state "
-            "and area. Use this before acting on devices whose ids you do not know.",
+            "Find entities by text, domain, device class and/or area. Returns entity_id, "
+            "name, state (with its unit) and area. Use this before acting on devices whose "
+            "ids you do not know. To find every sensor of a kind (all battery levels, all "
+            "temperatures), filter on device_class rather than on text: names vary by "
+            "language and integration.",
             obj(
                 {
                     "query": {
@@ -136,6 +141,10 @@ class SearchEntities(Tool):
                         "description": "Text matched against id and name",
                     },
                     "domain": {"type": "string", "description": "e.g. light, sensor"},
+                    "device_class": {
+                        "type": "string",
+                        "description": "e.g. battery, temperature, door, window",
+                    },
                     "area": {"type": "string", "description": "Area id or name"},
                     "limit": {"type": "integer", "default": 40},
                 }
@@ -147,6 +156,7 @@ class SearchEntities(Tool):
         query = (args.get("query") or "").lower().strip()
         terms = query.split()
         domain = args.get("domain")
+        device_class = (args.get("device_class") or "").lower().strip()
         area = (args.get("area") or "").lower().strip()
         area_ids: set[str] | None = None
         if area:
@@ -164,6 +174,10 @@ class SearchEntities(Tool):
                 hay = f"{state.entity_id} {state.name}".lower()
                 if not all(t in hay for t in terms):
                     continue
+            if device_class and str(state.attributes.get("device_class", "")).lower() != (
+                device_class
+            ):
+                continue
             if area_ids is not None and entity_area(hass, state.entity_id) not in area_ids:
                 continue
             total += 1

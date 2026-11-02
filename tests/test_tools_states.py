@@ -65,6 +65,30 @@ async def test_search_entities_filters_text_domain_area_and_limits_results(hass,
     }
 
 
+async def test_search_entities_filters_device_class_whatever_the_name(hass):
+    # Names vary by language: a text search for "battery" misses "batterij".
+    pct = {"device_class": "battery", "unit_of_measurement": "%"}
+    hass.states.async_set("sensor.dimmer_batterij", "18", {**pct, "friendly_name": "Dimmer"})
+    hass.states.async_set("sensor.phone_battery_level", "80", pct)
+    hass.states.async_set(
+        "sensor.lock_battery_voltage",
+        "7.4",
+        {"device_class": "voltage", "unit_of_measurement": "V"},
+    )
+    hass.states.async_set("sensor.temperature", "21")
+    out = await _tool("search_entities").run(
+        _ctx(hass), {"domain": "sensor", "device_class": " Battery "}
+    )
+    assert out.data["total"] == 2
+    assert {e["entity_id"]: e["unit"] for e in out.data["entities"]} == {
+        "sensor.dimmer_batterij": "%",
+        "sensor.phone_battery_level": "%",
+    }
+    # Without a unit there is no unit key.
+    out = await _tool("search_entities").run(_ctx(hass), {"query": "sensor.temperature"})
+    assert "unit" not in out.data["entities"][0]
+
+
 async def test_search_entities_rejects_invalid_limit(hass):
     with pytest.raises(ToolError, match="limit"):
         await _tool("search_entities").run(_ctx(hass), {"limit": "invalid"})
