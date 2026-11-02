@@ -18,6 +18,7 @@ import homeassistant.util.dt as dt_util
 
 from ..approval import Risk, classify_service, expand_members
 from . import Tool, ToolContext, ToolError, ToolOutput, list_arg, num_arg, obj, similar_entities
+from .util import all_devices
 
 STATE_ATTR_SKIP = {
     "friendly_name",
@@ -76,14 +77,14 @@ def expand_target(hass, target: dict[str, Any] | None, domain: str = "") -> list
         areas |= {a.id for a in ar.async_get(hass).areas.values() if a.floor_id in floors}
     if labels:
         areas |= {a.id for a in ar.async_get(hass).areas.values() if labels & set(a.labels)}
-        devices |= {d.id for d in dev_reg.devices.values() if labels & set(d.labels)}
+        devices |= {d.id for d in all_devices(dev_reg) if labels & set(d.labels)}
     if areas:
-        devices |= {d.id for d in dev_reg.devices.values() if d.area_id in areas}
+        devices |= {d.id for d in all_devices(dev_reg) if d.area_id in areas}
     if devices or areas or labels:
         # child devices (via_device) are acted on too, as HA's own expansion does
         parents = set(devices)
         while parents:
-            children = {d.id for d in dev_reg.devices.values() if d.via_device_id in parents}
+            children = {d.id for d in all_devices(dev_reg) if d.via_device_id in parents}
             parents = children - devices
             devices |= children
         for entry in ent_reg.entities.values():

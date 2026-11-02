@@ -122,3 +122,13 @@ def write_text(path: Path, content: str) -> None:
 def remove_file(path: Path) -> None:
     with contextlib.suppress(FileNotFoundError):
         os.remove(path)
+
+
+def all_devices(registry: Any) -> list[Any]:
+    """Every device entry. Since Home Assistant 2026.10, iterating registry.devices gives
+    the entries and using it as a mapping (.values()) is deprecated; before, it was a
+    mapping whose iteration gave the ids."""
+    items = list(registry.devices)
+    if items and isinstance(items[0], str):
+        return [registry.devices[device_id] for device_id in items]
+    return items

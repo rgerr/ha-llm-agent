@@ -12,6 +12,7 @@ from homeassistant.helpers import (
 
 from ..approval import Risk
 from . import Tool, ToolContext, ToolError, ToolOutput, num_arg, obj
+from .util import all_devices
 
 
 def _flag(changes: dict[str, Any], key: str) -> bool:
@@ -40,7 +41,7 @@ class ListAreas(Tool):
     async def run(self, ctx: ToolContext, args: dict[str, Any]) -> ToolOutput:
         hass = ctx.hass
         dev_counts: dict[str | None, int] = {}
-        for device in dr.async_get(hass).devices.values():
+        for device in all_devices(dr.async_get(hass)):
             dev_counts[device.area_id] = dev_counts.get(device.area_id, 0) + 1
         return ToolOutput(
             [
@@ -76,7 +77,7 @@ class ListDevices(Tool):
         limit = num_arg(args, "limit", 50, 1, 300)
         ent_reg = er.async_get(hass)
         out = []
-        for device in dr.async_get(hass).devices.values():
+        for device in all_devices(dr.async_get(hass)):
             if area and device.area_id != area:
                 continue
             name = device.name_by_user or device.name or ""
