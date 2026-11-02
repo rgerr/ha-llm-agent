@@ -494,3 +494,35 @@ def test_cancel_repair_answers_a_reused_call_id() -> None:
     ]
     _close_open_calls(messages)
     assert messages[-1]["role"] == "tool" and messages[-1]["is_error"]
+
+
+async def test_actions_that_only_answer_run_in_read_only_mode(hass: HomeAssistant) -> None:
+    from homeassistant.core import SupportsResponse
+
+    from custom_components.llm_agent.const import CONF_APPROVAL_MODE, MODE_READ_ONLY
+
+    items = {"todo.faults": {"items": [{"summary": "Bridge offline", "status": "needs_action"}]}}
+    calls: list[ServiceCall] = []
+
+    async def get_items(call: ServiceCall) -> dict[str, Any]:
+        calls.append(call)
+        return items
+
+    hass.services.async_register(
+        "todo", "get_items", get_items, supports_response=SupportsResponse.ONLY
+    )
+    hass.states.async_set("todo.faults", "1")
+    args = {
+        "domain": "todo",
+        "service": "get_items",
+        "target": {"entity_id": "todo.faults"},
+        "data": {"status": "needs_action"},
+    }  # no return_response: the action only answers, so it is asked for anyway
+    provider = ScriptedProvider([reply_tool("c1", "call_service", args), reply_text("One.")])
+    conv, events = await _run(
+        hass, provider, "open faults?", **{CONF_APPROVAL_MODE: MODE_READ_ONLY}
+    )
+    assert len(calls) == 1
+    assert not any(e["type"] == "approval" for e in events)
+    tool = next(m for m in conv["messages"] if m["role"] == "tool")
+    assert tool["is_error"] is False and "Bridge offline" in str(tool["content"])

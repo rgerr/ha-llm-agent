@@ -14,6 +14,8 @@ async def test_classify_service(hass: HomeAssistant) -> None:
     assert classify_service(hass, "light", "turn_on", ["light.a"]).level is Level.WRITE
     assert classify_service(hass, "lock", "unlock", ["lock.front"]).level is Level.RISKY
     assert classify_service(hass, "lock", "lock", ["lock.front"]).level is Level.WRITE
+    assert classify_service(hass, "todo", "get_items", ["todo.a"]).level is Level.READ
+    assert classify_service(hass, "todo", "remove_item", ["todo.a"]).level is Level.RISKY
     assert classify_service(hass, "cover", "open_cover", ["cover.garage"]).level is Level.RISKY
     assert classify_service(hass, "cover", "open_cover", ["cover.blind"]).level is Level.WRITE
     assert classify_service(hass, "homeassistant", "turn_off", ["lock.front"]).level is Level.RISKY

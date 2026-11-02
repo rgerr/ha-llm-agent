@@ -177,7 +177,8 @@ straight away, and you can undo the automation.
 
 **Read-only mode.** Use it to let the AI look around and explain without touching
 anything: questions, history, traces, logs and docs all work, and every change is
-refused before it runs, whatever the rules say. It applies to household members' chats
+refused before it runs, whatever the rules say. Actions that only return data
+(`todo.get_items`, `calendar.get_events`, `weather.get_forecasts`) count as reading. It applies to household members' chats
 and automations too. The Assist voice agent is separate and keeps Assist's own controls.
 
 **Reviewer mode.** A second model, which can be a cheap one or a local Ollama model,

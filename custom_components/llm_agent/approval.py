@@ -152,6 +152,14 @@ RISKY_DOMAINS = {
 RISKY_SCENE_SERVICES = {"apply", "create"}
 
 # Services that are harmless even in risky domains.
+# Actions that only return data. They change nothing, so they run like any other read,
+# also in read-only mode and from automations.
+READ_SERVICES = {
+    ("todo", "get_items"),
+    ("calendar", "get_events"),
+    ("weather", "get_forecasts"),
+}
+
 SAFE_SERVICES = {
     ("homeassistant", "update_entity"),
     ("homeassistant", "reload_core_config"),
@@ -219,6 +227,8 @@ def classify_service(hass: HomeAssistant, domain: str, service: str, entity_ids:
     domain, service = str(domain).strip().lower(), str(service).strip().lower()
     named = [str(e).strip().lower() for e in entity_ids]
     entity_ids = expand_members(hass, named)
+    if (domain, service) in READ_SERVICES:
+        return Risk.read()
     if (domain, service) in SAFE_SERVICES and domain not in ("homeassistant", "scene"):
         return Risk.write()  # named exceptions like update.clear_skipped
     if len(entity_ids) >= MAX_MEMBERS:

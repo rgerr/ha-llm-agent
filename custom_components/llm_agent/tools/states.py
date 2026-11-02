@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-from homeassistant.core import Context
+from homeassistant.core import Context, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
     area_registry as ar,
@@ -547,7 +547,10 @@ class CallService(Tool):
         if target is not None and not isinstance(target, dict):
             raise ToolError('\'target\' must be an object such as {"entity_id": "light.kitchen"}')
         _check_entities(hass, domain, service, target)
-        want_response = bool(args.get("return_response"))
+        # An action that only answers (todo.get_items) fails without return_response.
+        want_response = bool(args.get("return_response")) or (
+            hass.services.supports_response(domain, service) is SupportsResponse.ONLY
+        )
         try:
             response = await hass.services.async_call(
                 domain,
