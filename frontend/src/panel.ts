@@ -88,6 +88,8 @@ class LlmAgentPanel extends LitElement {
   private gen = 0;
   private listening?: HassConnection;
   private unsub?: () => Promise<void>;
+  // a reply was still running when the page went to the background
+  private leftRunning = false;
   private started = false;
   private stickToBottom = true;
   private renderTimer?: number;
@@ -196,8 +198,25 @@ class LlmAgentPanel extends LitElement {
     }
   };
 
+  /** A phone keeps the app's page alive in the background, still subscribed. Let go
+   * of a running reply while the page is hidden, so the server sees nobody watching
+   * (a "reply ready" notification, an approval straight to the phone), and read the
+   * chat again when the page comes back. */
+  private readonly onVisibility = (): void => {
+    if (document.visibilityState === "hidden") {
+      if (this.running && this.unsub) {
+        this.leftRunning = true;
+        void this.detach();
+      }
+    } else if (this.leftRunning) {
+      this.leftRunning = false;
+      if (this.convId) void this.open(this.convId).catch(() => undefined);
+    }
+  };
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    document.removeEventListener("visibilitychange", this.onVisibility);
     window.removeEventListener("location-changed", this.onLocation);
     this.listening?.removeEventListener?.("ready", this.onReady);
     this.listening = undefined;
@@ -209,6 +228,7 @@ class LlmAgentPanel extends LitElement {
     this.listening = this.ws;
     this.ws.addEventListener?.("ready", this.onReady);
     window.addEventListener("location-changed", this.onLocation);
+    document.addEventListener("visibilitychange", this.onVisibility);
     if (await loadLanguage(this.hass?.locale?.language))
       this.requestUpdate();
     try {

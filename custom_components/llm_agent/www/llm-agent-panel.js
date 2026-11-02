@@ -4872,11 +4872,13 @@ var Mi = o`
 	cost: 0
 }, $ = class extends k {
 	constructor(...e) {
-		super(...e), this.narrow = !1, this.convs = [], this.query = "", this.previews = /* @__PURE__ */ new Set(), this.hits = null, this.convId = null, this.chatTitle = "New chat", this.items = [], this.usage = Pi, this.running = !1, this.announce = "", this.editing = !1, this.photos = [], this.photoGen = 0, this.providerId = "", this.model = "", this.fetched = {}, this.showList = !1, this.loadError = "", this.mentions = [], this.prefs = Vi(), this.showPrefs = !1, this.showNotes = !1, this.notesDraft = "", this.notesBase = "", this.notesStatus = "", this.mentionIndex = 0, this.mentionStart = -1, this.gen = 0, this.started = !1, this.stickToBottom = !0, this.onReady = () => {
+		super(...e), this.narrow = !1, this.convs = [], this.query = "", this.previews = /* @__PURE__ */ new Set(), this.hits = null, this.convId = null, this.chatTitle = "New chat", this.items = [], this.usage = Pi, this.running = !1, this.announce = "", this.editing = !1, this.photos = [], this.photoGen = 0, this.providerId = "", this.model = "", this.fetched = {}, this.showList = !1, this.loadError = "", this.mentions = [], this.prefs = Vi(), this.showPrefs = !1, this.showNotes = !1, this.notesDraft = "", this.notesBase = "", this.notesStatus = "", this.mentionIndex = 0, this.mentionStart = -1, this.gen = 0, this.leftRunning = !1, this.started = !1, this.stickToBottom = !0, this.onReady = () => {
 			this.running && this.convId && this.open(this.convId).catch(() => void 0);
 		}, this.onLocation = () => {
 			let e = Li();
 			e && e !== this.convId && this.refreshList().then(() => this.convs.some((t) => t.id === e) ? this.open(e) : void 0).catch(() => void 0);
+		}, this.onVisibility = () => {
+			document.visibilityState === "hidden" ? this.running && this.unsub && (this.leftRunning = !0, this.detach()) : this.leftRunning && (this.leftRunning = !1, this.convId && this.open(this.convId).catch(() => void 0));
 		}, this.modelError = "", this.loadingModels = /* @__PURE__ */ new Set(), this.noteCardSince = /* @__PURE__ */ new Map();
 	}
 	static {
@@ -4936,10 +4938,10 @@ var Mi = o`
 		}
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), window.removeEventListener("location-changed", this.onLocation), this.listening?.removeEventListener?.("ready", this.onReady), this.listening = void 0, this.detach(), this.started = !1;
+		super.disconnectedCallback(), document.removeEventListener("visibilitychange", this.onVisibility), window.removeEventListener("location-changed", this.onLocation), this.listening?.removeEventListener?.("ready", this.onReady), this.listening = void 0, this.detach(), this.started = !1;
 	}
 	async init() {
-		this.listening = this.ws, this.ws.addEventListener?.("ready", this.onReady), window.addEventListener("location-changed", this.onLocation), await ct(this.hass?.locale?.language) && this.requestUpdate();
+		this.listening = this.ws, this.ws.addEventListener?.("ready", this.onReady), window.addEventListener("location-changed", this.onLocation), document.addEventListener("visibilitychange", this.onVisibility), await ct(this.hass?.locale?.language) && this.requestUpdate();
 		try {
 			this.info = await this.ws.sendMessagePromise({ type: "llm_agent/info" }), this.loadError = "";
 		} catch (e) {
