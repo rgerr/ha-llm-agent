@@ -165,6 +165,14 @@ class SearchEntities(Tool):
                 for a in ar.async_get(hass).async_list_areas()
                 if a.id == area or a.name.lower() == area or area in a.name.lower()
             }
+        if area_ids == set():
+            # Say so instead of an empty list: a model reads "0 found" as "doesn't exist"
+            # while the device is there, in an area with another name.
+            names = sorted(a.name for a in ar.async_get(hass).async_list_areas())
+            raise ToolError(
+                f"No area is called '{args.get('area')}'. Areas: {', '.join(names) or 'none'}. "
+                "Pick one of these, or search by text without an area."
+            )
         limit = num_arg(args, "limit", 40, 1, 200)
         states = hass.states.async_all(domain) if domain else hass.states.async_all()
         results = []

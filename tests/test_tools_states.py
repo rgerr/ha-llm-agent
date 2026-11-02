@@ -59,10 +59,8 @@ async def test_search_entities_filters_text_domain_area_and_limits_results(hass,
     out = await tool.run(_ctx(hass), {"domain": "light", "limit": 1})
     assert out.data["total"] == 2
     assert len(out.data["entities"]) == 1
-    assert (await tool.run(_ctx(hass), {"area": "nonexistent"})).data == {
-        "total": 0,
-        "entities": [],
-    }
+    with pytest.raises(ToolError, match=r"No area is called 'nonexistent'\. Areas: Living Room"):
+        await tool.run(_ctx(hass), {"area": "nonexistent"})
 
 
 async def test_search_entities_filters_device_class_whatever_the_name(hass):
