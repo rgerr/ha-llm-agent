@@ -312,6 +312,10 @@
         "title": {
           "name": "Título",
           "description": "Nome da nova conversa no painel de IA, como \"Verificação semanal das baterias\". Deixe vazio para usar o início da instrução."
+        },
+        "timeout": {
+          "name": "Tempo limite",
+          "description": "Segundos de espera pela resposta antes de a ação falhar. Padrão 300; aumente para um modelo local lento."
         }
       }
     }

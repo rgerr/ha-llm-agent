@@ -312,6 +312,10 @@
         "title": {
           "name": "Título",
           "description": "Nombre para el nuevo chat en el panel de IA, como «Revisión semanal de baterías». Déjalo vacío para usar el principio de la instrucción."
+        },
+        "timeout": {
+          "name": "Tiempo de espera",
+          "description": "Segundos que se espera la respuesta antes de que la acción falle. Por defecto 300; auméntalo para un modelo local lento."
         }
       }
     }

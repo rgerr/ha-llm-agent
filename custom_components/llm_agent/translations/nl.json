@@ -312,6 +312,10 @@
         "title": {
           "name": "Titel",
           "description": "Naam voor de nieuwe chat in het AI-paneel, zoals \"Wekelijkse batterijcontrole\". Laat leeg om het begin van de instructie te gebruiken."
+        },
+        "timeout": {
+          "name": "Wachttijd",
+          "description": "Aantal seconden wachten op het antwoord voordat de actie mislukt. Standaard 300; zet hem hoger voor een traag lokaal model."
         }
       }
     }

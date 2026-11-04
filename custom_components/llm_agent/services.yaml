@@ -20,3 +20,11 @@ ask:
       example: "Weekly battery check"
       selector:
         text:
+    timeout:
+      example: 900
+      selector:
+        number:
+          min: 10
+          max: 3600
+          unit_of_measurement: s
+          mode: box

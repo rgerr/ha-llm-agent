@@ -17,6 +17,7 @@ from .agent import ChatRun, home_context
 from .const import CONF_HOME_SUMMARY, DOMAIN, setting
 
 ASK_TIMEOUT = 300  # seconds; an automation should not hang on a slow model
+ASK_TIMEOUT_MAX = 3600
 
 ASK_SCHEMA = vol.Schema(
     {
@@ -25,6 +26,8 @@ ASK_SCHEMA = vol.Schema(
         vol.Optional("model"): str,
         vol.Optional("conversation_id"): str,
         vol.Optional("title"): vol.All(str, vol.Length(min=1, max=120)),
+        # A slow local model can need more than the default for a long investigation.
+        vol.Optional("timeout"): vol.All(vol.Coerce(int), vol.Range(min=10, max=ASK_TIMEOUT_MAX)),
     }
 )
 
@@ -84,12 +87,13 @@ def async_setup_services(hass: HomeAssistant) -> None:
                     agent.runs.pop(conv["id"], None)
 
         run.task = hass.async_create_task(_run(), "llm_agent_ask")
+        limit = call.data.get("timeout", ASK_TIMEOUT)
         try:
-            async with asyncio.timeout(ASK_TIMEOUT):
+            async with asyncio.timeout(limit):
                 await asyncio.shield(run.task)
         except TimeoutError as err:
             run.task.cancel()
-            raise HomeAssistantError(f"No answer within {ASK_TIMEOUT} seconds") from err
+            raise HomeAssistantError(f"No answer within {limit} seconds") from err
         except asyncio.CancelledError:
             current = asyncio.current_task()
             if run.task.cancelled() and not (current and current.cancelling()):

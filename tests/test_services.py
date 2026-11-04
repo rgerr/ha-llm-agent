@@ -139,6 +139,33 @@ async def test_failures_and_timeouts_are_reported(hass: HomeAssistant) -> None:
     assert hass.data[DOMAIN].runs == {}
 
 
+async def test_an_automation_can_wait_longer_than_the_default(hass: HomeAssistant) -> None:
+    import asyncio
+
+    from homeassistant.exceptions import HomeAssistantError
+
+    from custom_components.llm_agent import agent as agent_mod, services
+
+    await _setup(hass)
+
+    async def slow(self, *args, **kwargs):
+        await asyncio.sleep(0.2)
+
+    # The default (shortened here) gives up; a longer timeout for this call waits.
+    with (
+        patch.object(agent_mod.ChatRun, "run", slow),
+        patch.object(services, "ASK_TIMEOUT", 0.05),
+        pytest.raises(HomeAssistantError, match=r"No answer within 0\.05 seconds"),
+    ):
+        await _ask(hass, ScriptedProvider([]), prompt="hello")
+    await hass.async_block_till_done()
+    with patch.object(agent_mod.ChatRun, "run", slow):
+        result = await _ask(hass, ScriptedProvider([]), prompt="hello", timeout=10)
+    assert "conversation_id" in result
+    with pytest.raises(Exception, match=r"timeout|value must be at least|range"):
+        await _ask(hass, ScriptedProvider([]), prompt="hello", timeout=5)
+
+
 async def test_runs_from_automations_are_named_and_marked_in_the_chat_list(
     hass: HomeAssistant,
 ) -> None:

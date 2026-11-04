@@ -312,6 +312,10 @@
         "title": {
           "name": "Titel",
           "description": "Namn på den nya chatten i AI-panelen, till exempel ”Veckans batterikontroll”. Lämna tomt för att använda början av instruktionen."
+        },
+        "timeout": {
+          "name": "Tidsgräns",
+          "description": "Sekunder att vänta på svaret innan åtgärden misslyckas. Standard 300; höj den för en långsam lokal modell."
         }
       }
     }

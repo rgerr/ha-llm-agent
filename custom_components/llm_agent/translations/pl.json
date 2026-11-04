@@ -312,6 +312,10 @@
         "title": {
           "name": "Tytuł",
           "description": "Nazwa nowego czatu w panelu AI, np. „Cotygodniowe sprawdzanie baterii”. Pozostaw puste, aby użyć początku instrukcji."
+        },
+        "timeout": {
+          "name": "Limit czasu",
+          "description": "Liczba sekund oczekiwania na odpowiedź, zanim akcja się nie powiedzie. Domyślnie 300; zwiększ dla wolnego modelu lokalnego."
         }
       }
     }

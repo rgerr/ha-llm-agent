@@ -312,6 +312,10 @@
         "title": {
           "name": "Titre",
           "description": "Nom de la nouvelle discussion dans le panneau IA, comme « Vérification hebdomadaire des piles ». Laisse vide pour utiliser le début de l'instruction."
+        },
+        "timeout": {
+          "name": "Délai",
+          "description": "Secondes d'attente de la réponse avant l'échec de l'action. 300 par défaut ; augmentez-le pour un modèle local lent."
         }
       }
     }

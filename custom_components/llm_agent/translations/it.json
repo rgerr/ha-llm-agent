@@ -312,6 +312,10 @@
         "title": {
           "name": "Titolo",
           "description": "Nome per la nuova chat nel pannello IA, ad esempio «Controllo settimanale delle batterie». Lascia vuoto per usare l'inizio dell'istruzione."
+        },
+        "timeout": {
+          "name": "Timeout",
+          "description": "Secondi di attesa della risposta prima che l'azione fallisca. Predefinito 300; aumentalo per un modello locale lento."
         }
       }
     }

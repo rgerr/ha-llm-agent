@@ -312,6 +312,10 @@
         "title": {
           "name": "Title",
           "description": "Name for the new chat in the AI panel, such as \"Weekly battery check\". Leave empty to use the start of the prompt."
+        },
+        "timeout": {
+          "name": "Timeout",
+          "description": "Seconds to wait for the reply before the action fails. Default 300; raise it for a slow local model."
         }
       }
     }

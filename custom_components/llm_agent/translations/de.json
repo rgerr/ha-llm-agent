@@ -312,6 +312,10 @@
         "title": {
           "name": "Titel",
           "description": "Name für den neuen Chat im KI-Panel, etwa „Wöchentliche Batterieprüfung“. Leer lassen, um den Anfang der Anweisung zu verwenden."
+        },
+        "timeout": {
+          "name": "Zeitlimit",
+          "description": "Sekunden, die auf die Antwort gewartet wird, bevor die Aktion fehlschlägt. Standard 300; für ein langsames lokales Modell erhöhen."
         }
       }
     }
